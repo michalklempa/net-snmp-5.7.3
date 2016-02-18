@@ -285,6 +285,8 @@ main(int argc, char *argv[])
     /*
      * open an SNMP session
      */
+    SOCK_STARTUP;
+    ss = snmp_open(&session);
     if (ss == NULL) {
         /*
          * diagnose snmp_open errors with the input netsnmp_session pointer
@@ -318,51 +320,62 @@ main(int argc, char *argv[])
         localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
         NETSNMP_DS_LIB_DUMP_PACKET);
 
+        get_field_names();
+        reverse_fields();
+
 #ifndef NETSNMP_DISABLE_SNMPV1
-    if (ss->version == SNMP_VERSION_1)
-        use_getbulk = 0;
+        if (ss->version == SNMP_VERSION_1)
+            use_getbulk = 0;
 #endif
+        exitval = 0;
 
-    do {
-        entries = 0;
-        allocated = 0;
-        if (!headers_only) {
-            if (use_getbulk)
-                getbulk_table_entries(ss);
-            else
-                get_table_entries(ss);
-        }
+        do {
+            entries = 0;
+            allocated = 0;
+            if (!headers_only) {
+                if (use_getbulk)
+                    getbulk_table_entries(ss);
+                else
+                    get_table_entries(ss);
+            }
 
-        if (exitval) {
-            snmp_close(ss);
-            SOCK_CLEANUP;
-            return exitval;
-        }
+            if (exitval) {
+                snmp_close(ss);
+                SOCK_CLEANUP;
+                return exitval;
+            }
 
-        if (entries || headers_only)
-            print_table();
+            if (entries || headers_only)
+                print_table();
 
-        if (data) {
-            free (data);
-            data = NULL;
-        }
+            if (data) {
+                free(data);
+                data = NULL;
+            }
 
-        if (indices) {
-            free (indices);
-            indices = NULL;
-        }
+            if (indices) {
+                free(indices);
+                indices = NULL;
+            }
 
-        total_entries += entries;
+            if (column) {
+                free(column);
+                column = NULL;
+            }
 
-    } while (!end_of_table);
+            total_entries += entries;
 
+        } while (!end_of_table);
+
+        if (total_entries == 0)
+            printf("%s: No entries\n", table_name);
+        if (extra_columns)
+            printf("%s: WARNING: More columns on agent than in MIB\n",
+                    table_name);
+
+    }
     snmp_close(ss);
     SOCK_CLEANUP;
-
-    if (total_entries == 0)
-        printf("%s: No entries\n", table_name);
-    if (extra_columns)
-	printf("%s: WARNING: More columns on agent than in MIB\n", table_name);
 
     return 0;
 }
@@ -374,7 +387,7 @@ print_table(void)
     char          **dp;
     char            string_buf[SPRINT_MAX_LEN];
     char           *index_fmt = NULL;
-    static int      first_pass = 1;
+    int      first_pass = 1;
 
     if (!no_headers && !headers_only && first_pass)
         printf("SNMP table: %s\n\n", table_name);
