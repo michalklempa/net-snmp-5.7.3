@@ -273,6 +273,18 @@ main(int argc, char *argv[])
     SOCK_STARTUP;
     ss = snmp_open(&session);
     /*
+     * open an SNMP session
+     */
+    if (ss == NULL) {
+        /*
+         * diagnose snmp_open errors with the input netsnmp_session pointer
+         */
+        snmp_sess_perror("snmptable", &session);
+        SOCK_CLEANUP;
+        exit(1);
+    }
+
+    /*
      * get the initial object and subtree 
      */
     /*
@@ -296,18 +308,6 @@ main(int argc, char *argv[])
 
         get_field_names();
         reverse_fields();
-
-        /*
-         * open an SNMP session
-         */
-        if (ss == NULL) {
-            /*
-             * diagnose snmp_open errors with the input netsnmp_session pointer
-             */
-            snmp_sess_perror("snmptable", &session);
-            SOCK_CLEANUP;
-            exit(1);
-        }
 
 #ifndef NETSNMP_DISABLE_SNMPV1
         if (ss->version == SNMP_VERSION_1)
