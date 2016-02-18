@@ -87,6 +87,7 @@ static int      brief = 0;
 static int      show_index = 0;
 static const char    *left_justify_flag = "";
 static char    *field_separator = NULL;
+static char    *empty_separator = (char[]){'?', '\0'};
 static char    *table_name;
 static oid      name[MAX_OID_LEN];
 static size_t   name_length;
@@ -165,6 +166,16 @@ optProc(int argc, char *const *argv, int opt)
 		}
 		optind++;
                 break;
+            case 'e':
+                if (optind < argc) {
+                    empty_separator = argv[optind];
+                } else {
+                    usage();
+                    fprintf(stderr, "Bad -Ce option: no argument given\n");
+                    exit(1);
+                }
+                optind++;
+                break;
             case 'h':
                 headers_only = 1;
                 break;
@@ -223,6 +234,7 @@ usage(void)
     fprintf(stderr, "\t\t\t  f<STR>:  print table delimitied with <STR>\n");
     fprintf(stderr, "\t\t\t  h:       print only the column headers\n");
     fprintf(stderr, "\t\t\t  H:       print no column headers\n");
+    fprintf(stderr, "\t\t\t  e<STR>:  use <STR> instead of default ? as a placeholder for table holes\n");
     fprintf(stderr, "\t\t\t  i:       print index values\n");
     fprintf(stderr, "\t\t\t  l:       left justify output\n");
     fprintf(stderr, "\t\t\t  r<NUM>:  for GETBULK: set max-repeaters to <NUM>\n");
@@ -441,7 +453,7 @@ print_table(void)
                         width = column_width + 1;
                     }
                 }
-                printf(column[field].fmt, dp[field] ? dp[field] : "?");
+                printf(column[field].fmt, dp[field] ? dp[field] : empty_separator);
             }
             dp += fields;
             printf("\n");
