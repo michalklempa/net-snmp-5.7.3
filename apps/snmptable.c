@@ -13,8 +13,8 @@
 
                       All Rights Reserved
 
-Permission to use, copy, modify, and distribute this software and its 
-documentation for any purpose and without fee is hereby granted, 
+Permission to use, copy, modify, and distribute this software and its
+documentation for any purpose and without fee is hereby granted,
 provided that the above copyright notice appear in all copies.
 
 I DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING
@@ -120,7 +120,7 @@ optProc(int argc, char *const *argv, int opt)
 			max_width = atoi(argv[optind]);
 			if (max_width == 0) {
 			    usage();
-			    fprintf(stderr, "Bad -Cw option: %s\n", 
+			    fprintf(stderr, "Bad -Cw option: %s\n",
 				    argv[optind]);
 			    exit(1);
 			}
@@ -138,7 +138,7 @@ optProc(int argc, char *const *argv, int opt)
 			column_width = atoi(argv[optind]);
 			if (column_width <= 2) {
 			    usage();
-			    fprintf(stderr, "Bad -Cc option: %s\n", 
+			    fprintf(stderr, "Bad -Cc option: %s\n",
 				    argv[optind]);
 			    exit(1);
 			}
@@ -186,7 +186,7 @@ optProc(int argc, char *const *argv, int opt)
 			max_getbulk = atoi(argv[optind]);
 			if (max_getbulk == 0) {
 			    usage();
-			    fprintf(stderr, "Bad -Cr option: %s\n", 
+			    fprintf(stderr, "Bad -Cr option: %s\n",
 				    argv[optind]);
 			    exit(1);
 			}
@@ -252,7 +252,7 @@ main(int argc, char *argv[])
 
     netsnmp_set_line_buffering(stdout);
 
-    netsnmp_ds_set_boolean(NETSNMP_DS_LIBRARY_ID, 
+    netsnmp_ds_set_boolean(NETSNMP_DS_LIBRARY_ID,
                            NETSNMP_DS_LIB_QUICK_PRINT, 1);
 
     /*
@@ -270,88 +270,96 @@ main(int argc, char *argv[])
         break;
     }
 
+    SOCK_STARTUP;
+    ss = snmp_open(&session);
     /*
      * get the initial object and subtree 
      */
     /*
      * specified on the command line 
      */
-    if (optind + 1 != argc) {
-        fprintf(stderr, "Must have exactly one table name\n");
-        usage();
-        exit(1);
-    }
+    for (;; optind++) {
+        if (optind == argc) {
+            break;
+        }
+        for (int i = 0; i < MAX_OID_LEN; i++) {
+            root[i] = 0;
+            name[i] = 0;
+        }
+        rootlen = MAX_OID_LEN;
+        if (!snmp_parse_oid(argv[optind], root, &rootlen)) {
+            snmp_perror(argv[optind]);
+            exit(1);
+        }
+        localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
+        NETSNMP_DS_LIB_DUMP_PACKET);
 
-    rootlen = MAX_OID_LEN;
-    if (!snmp_parse_oid(argv[optind], root, &rootlen)) {
-        snmp_perror(argv[optind]);
-        exit(1);
-    }
-    localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID, 
-                                        NETSNMP_DS_LIB_DUMP_PACKET);
+        get_field_names();
+        reverse_fields();
 
-    get_field_names();
-    reverse_fields();
-
-    /*
-     * open an SNMP session 
-     */
-    SOCK_STARTUP;
-    ss = snmp_open(&session);
-    if (ss == NULL) {
         /*
-         * diagnose snmp_open errors with the input netsnmp_session pointer 
+         * open an SNMP session
          */
-        snmp_sess_perror("snmptable", &session);
-        SOCK_CLEANUP;
-        exit(1);
-    }
+        if (ss == NULL) {
+            /*
+             * diagnose snmp_open errors with the input netsnmp_session pointer
+             */
+            snmp_sess_perror("snmptable", &session);
+            SOCK_CLEANUP;
+            exit(1);
+        }
 
 #ifndef NETSNMP_DISABLE_SNMPV1
-    if (ss->version == SNMP_VERSION_1)
-        use_getbulk = 0;
+        if (ss->version == SNMP_VERSION_1)
+            use_getbulk = 0;
 #endif
 
-    do {
-        entries = 0;
-        allocated = 0;
-        if (!headers_only) {
-            if (use_getbulk)
-                getbulk_table_entries(ss);
-            else
-                get_table_entries(ss);
-        }
+        do {
+            entries = 0;
+            allocated = 0;
+            if (!headers_only) {
+                if (use_getbulk)
+                    getbulk_table_entries(ss);
+                else
+                    get_table_entries(ss);
+            }
 
-        if (exitval) {
-            snmp_close(ss);
-            SOCK_CLEANUP;
-            return exitval;
-        }
+            if (exitval) {
+                snmp_close(ss);
+                SOCK_CLEANUP;
+                return exitval;
+            }
 
-        if (entries || headers_only)
-            print_table();
+            if (entries || headers_only)
+                print_table();
 
-        if (data) {
-            free (data);
-            data = NULL;
-        }
+            if (data) {
+                free(data);
+                data = NULL;
+            }
 
-        if (indices) {
-            free (indices);
-            indices = NULL;
-        }
+            if (indices) {
+                free(indices);
+                indices = NULL;
+            }
 
-        total_entries += entries;
+            if (column) {
+                free(column);
+                column = NULL;
+            }
 
-    } while (!end_of_table);
+            total_entries += entries;
 
+        } while (!end_of_table);
+
+        if (total_entries == 0)
+            printf("%s: No entries\n", table_name);
+        if (extra_columns)
+            printf("%s: WARNING: More columns on agent than in MIB\n",
+                    table_name);
+    }
     snmp_close(ss);
     SOCK_CLEANUP;
-
-    if (total_entries == 0)
-        printf("%s: No entries\n", table_name);
-    if (extra_columns)
-	printf("%s: WARNING: More columns on agent than in MIB\n", table_name);
 
     return 0;
 }
@@ -363,7 +371,7 @@ print_table(void)
     char          **dp;
     char            string_buf[SPRINT_MAX_LEN];
     char           *index_fmt = NULL;
-    static int      first_pass = 1;
+    int      first_pass = 1;
 
     if (!no_headers && !headers_only && first_pass)
         printf("SNMP table: %s\n\n", table_name);
@@ -698,7 +706,7 @@ get_table_entries(netsnmp_session * ss)
                         }
                         i = vars->name_length - rootlen + 1;
                         if (localdebug || show_index) {
-                            if (netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID, 
+                            if (netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
                                               NETSNMP_DS_LIB_EXTENDED_INDEX)) {
                                 name_p = strchr(buf, '[');
                             } else {
@@ -874,7 +882,7 @@ getbulk_table_entries(netsnmp_session * ss)
 			vars = vars->next_variable;
 			continue;
 		    }
-                    if (netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID, 
+                    if (netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
                                               NETSNMP_DS_LIB_EXTENDED_INDEX)) {
                         name_p = strchr(buf, '[');
                     } else {
