@@ -301,6 +301,8 @@ main(int argc, char *argv[])
         rootlen = MAX_OID_LEN;
         if (!snmp_parse_oid(argv[optind], root, &rootlen)) {
             snmp_perror(argv[optind]);
+            snmp_close(ss);
+            SOCK_CLEANUP;
             exit(1);
         }
         localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
