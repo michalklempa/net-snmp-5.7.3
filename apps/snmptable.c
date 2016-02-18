@@ -213,7 +213,7 @@ usage(void)
 {
     fprintf(stderr, "USAGE: snmptable ");
     snmp_parse_args_usage(stderr);
-    fprintf(stderr, " TABLE-OID\n\n");
+    fprintf(stderr, " TABLE-OID [TABLE-OID] [TABLE-OID] [...]\n\n");
     snmp_parse_args_descriptions(stderr);
     fprintf(stderr,
 	    "  -C APPOPTS\t\tSet various application specific behaviours:\n");

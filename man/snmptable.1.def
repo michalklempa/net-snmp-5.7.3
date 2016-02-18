@@ -26,12 +26,13 @@ snmptable - retrieve an SNMP table and display it in tabular form
 .SH SYNOPSIS
 .B snmptable
 [COMMON OPTIONS] [\-Cb] [\-CB] [\-Ch] [\-CH] [\-Ci] [\-Cf STRING] [\-Cw WIDTH]
-AGENT TABLE\-OID
+AGENT TABLE\-OID [TABLE\-OID] [TABLE\-OID] [...] 
 .SH DESCRIPTION
 .B snmptable
 is an SNMP application that repeatedly uses the SNMP GETNEXT or
 GETBULK requests to query for information on a network entity.  The
-parameter TABLE\-OID must specify an SNMP table.
+parameter TABLE\-OID must specify an SNMP table. User has a possibility
+to supply multiple TABLE\-OIDs, these are collected one-by-one.
 
 AGENT identifies a target SNMP agent, which is instrumented
 to monitor the given objects.  At its simplest, the AGENT
