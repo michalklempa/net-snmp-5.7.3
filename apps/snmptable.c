@@ -213,7 +213,7 @@ usage(void)
 {
     fprintf(stderr, "USAGE: snmptable ");
     snmp_parse_args_usage(stderr);
-    fprintf(stderr, " TABLE-OID\n\n");
+    fprintf(stderr, " TABLE-OID [TABLE-OID] [TABLE-OID] [...]\n\n");
     snmp_parse_args_descriptions(stderr);
     fprintf(stderr,
 	    "  -C APPOPTS\t\tSet various application specific behaviours:\n");
@@ -271,41 +271,40 @@ main(int argc, char *argv[])
     }
 
     /*
-     * get the initial object and subtree 
+     * open an SNMP session
      */
-    /*
-     * specified on the command line 
-     */
-    if (optind + 1 != argc) {
-        fprintf(stderr, "Must have exactly one table name\n");
-        usage();
-        exit(1);
-    }
-
-    rootlen = MAX_OID_LEN;
-    if (!snmp_parse_oid(argv[optind], root, &rootlen)) {
-        snmp_perror(argv[optind]);
-        exit(1);
-    }
-    localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID, 
-                                        NETSNMP_DS_LIB_DUMP_PACKET);
-
-    get_field_names();
-    reverse_fields();
-
-    /*
-     * open an SNMP session 
-     */
-    SOCK_STARTUP;
-    ss = snmp_open(&session);
     if (ss == NULL) {
         /*
-         * diagnose snmp_open errors with the input netsnmp_session pointer 
+         * diagnose snmp_open errors with the input netsnmp_session pointer
          */
         snmp_sess_perror("snmptable", &session);
         SOCK_CLEANUP;
         exit(1);
     }
+
+    /*
+     * get the initial object and subtree 
+     */
+    /*
+     * specified on the command line 
+     */
+    for (;; optind++) {
+        if (optind == argc) {
+            break;
+        }
+        for (int i = 0; i < MAX_OID_LEN; i++) {
+            root[i] = 0;
+            name[i] = 0;
+        }
+        rootlen = MAX_OID_LEN;
+        if (!snmp_parse_oid(argv[optind], root, &rootlen)) {
+            snmp_perror(argv[optind]);
+            snmp_close(ss);
+            SOCK_CLEANUP;
+            exit(1);
+        }
+        localdebug = netsnmp_ds_get_boolean(NETSNMP_DS_LIBRARY_ID,
+        NETSNMP_DS_LIB_DUMP_PACKET);
 
 #ifndef NETSNMP_DISABLE_SNMPV1
     if (ss->version == SNMP_VERSION_1)
