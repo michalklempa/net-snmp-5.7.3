@@ -25,7 +25,7 @@
 snmptable - retrieve an SNMP table and display it in tabular form
 .SH SYNOPSIS
 .B snmptable
-[COMMON OPTIONS] [\-Cb] [\-CB] [\-Ch] [\-CH] [\-Ci] [\-Cf STRING] [\-Cw WIDTH]
+[COMMON OPTIONS] [\-Cb] [\-CB] [\-Ch] [\-CH] [\-Ce STRING] [\-Ci] [\-Cf STRING] [\-Cw WIDTH]
 AGENT TABLE\-OID
 .SH DESCRIPTION
 .B snmptable
@@ -78,6 +78,11 @@ the column headings.
 .B \-CH
 Do not display the column headings.
 .TP
+.BI \-Ce " STRING"
+The string
+.I STRING
+is used to override default ? as a placeholder for table columns without value (table holes).
+.TP
 .B \-Ci
 This option prepends the index of the entry to all printed lines.
 .TP
@@ -121,6 +126,14 @@ SNMP table: at.atTable
 
 atIfIndex+atPhysAddress+atNetAddress
 1+8:0:20:20:0:ab+130.225.243.33
+.PP
+$ snmptable \-v 2c \-c public \-Cf , \-Ce '<empty>' localhost at.atTable
+
+SNMP table: at.atTable
+
+atIfIndex,atPhysAddress,atNetAddress
+1,8:0:20:20:0:ab,130.225.243.33
+1,8:0:20:20:0:ac,<empty>
 .PP
 .nf
 $ snmptable localhost \-Cl \-CB \-Ci \-OX \-Cb \-Cc 16 \-Cw 64 ifTable
