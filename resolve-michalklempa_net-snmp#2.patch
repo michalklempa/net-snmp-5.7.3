@@ -1,0 +1,99 @@
+From 5c95ef29718c2a695bdc6158ef13bdc7be63a1d8 Mon Sep 17 00:00:00 2001
+From: Michal Klempa <michal.klempa@gmail.com>
+Date: Thu, 18 Feb 2016 12:51:08 +0100
+Subject: [PATCH] Resolve #2 - added option -Ce<STR>
+
+---
+ apps/snmptable.c    | 14 +++++++++++++-
+ man/snmptable.1.def | 15 ++++++++++++++-
+ 2 files changed, 27 insertions(+), 2 deletions(-)
+
+diff --git a/apps/snmptable.c b/apps/snmptable.c
+index c9c7d26..850d402 100644
+--- a/apps/snmptable.c
++++ b/apps/snmptable.c
+@@ -87,6 +87,7 @@ static int      brief = 0;
+ static int      show_index = 0;
+ static const char    *left_justify_flag = "";
+ static char    *field_separator = NULL;
++static char    *empty_separator = (char[]){'?', '\0'};
+ static char    *table_name;
+ static oid      name[MAX_OID_LEN];
+ static size_t   name_length;
+@@ -165,6 +166,16 @@ optProc(int argc, char *const *argv, int opt)
+ 		}
+ 		optind++;
+                 break;
++            case 'e':
++                if (optind < argc) {
++                    empty_separator = argv[optind];
++                } else {
++                    usage();
++                    fprintf(stderr, "Bad -Ce option: no argument given\n");
++                    exit(1);
++                }
++                optind++;
++                break;
+             case 'h':
+                 headers_only = 1;
+                 break;
+@@ -223,6 +234,7 @@ usage(void)
+     fprintf(stderr, "\t\t\t  f<STR>:  print table delimitied with <STR>\n");
+     fprintf(stderr, "\t\t\t  h:       print only the column headers\n");
+     fprintf(stderr, "\t\t\t  H:       print no column headers\n");
++    fprintf(stderr, "\t\t\t  e<STR>:  use <STR> instead of default ? as a placeholder for table holes\n");
+     fprintf(stderr, "\t\t\t  i:       print index values\n");
+     fprintf(stderr, "\t\t\t  l:       left justify output\n");
+     fprintf(stderr, "\t\t\t  r<NUM>:  for GETBULK: set max-repeaters to <NUM>\n");
+@@ -442,7 +454,7 @@ print_table(void)
+                         width = column_width + 1;
+                     }
+                 }
+-                printf(column[field].fmt, dp[field] ? dp[field] : "?");
++                printf(column[field].fmt, dp[field] ? dp[field] : empty_separator);
+             }
+             dp += fields;
+             printf("\n");
+diff --git a/man/snmptable.1.def b/man/snmptable.1.def
+index 4e65cb4..ef6369a 100644
+--- a/man/snmptable.1.def
++++ b/man/snmptable.1.def
+@@ -25,7 +25,7 @@
+ snmptable - retrieve an SNMP table and display it in tabular form
+ .SH SYNOPSIS
+ .B snmptable
+-[COMMON OPTIONS] [\-Cb] [\-CB] [\-Ch] [\-CH] [\-Ci] [\-Cf STRING] [\-Cw WIDTH]
++[COMMON OPTIONS] [\-Cb] [\-CB] [\-Ch] [\-CH] [\-Ce STRING] [\-Ci] [\-Cf STRING] [\-Cw WIDTH]
+ AGENT TABLE\-OID
+ .SH DESCRIPTION
+ .B snmptable
+@@ -78,6 +78,11 @@ the column headings.
+ .B \-CH
+ Do not display the column headings.
+ .TP
++.BI \-Ce " STRING"
++The string
++.I STRING
++is used to override default ? as a placeholder for table columns without value (table holes).
++.TP
+ .B \-Ci
+ This option prepends the index of the entry to all printed lines.
+ .TP
+@@ -122,6 +127,14 @@ SNMP table: at.atTable
+ atIfIndex+atPhysAddress+atNetAddress
+ 1+8:0:20:20:0:ab+130.225.243.33
+ .PP
++$ snmptable \-v 2c \-c public \-Cf , \-Ce '<empty>' localhost at.atTable
++
++SNMP table: at.atTable
++
++atIfIndex,atPhysAddress,atNetAddress
++1,8:0:20:20:0:ab,130.225.243.33
++1,8:0:20:20:0:ac,<empty>
++.PP
+ .nf
+ $ snmptable localhost \-Cl \-CB \-Ci \-OX \-Cb \-Cc 16 \-Cw 64 ifTable
+ 
+-- 
+2.5.0
+
